@@ -49,6 +49,37 @@ set **General → Capturing** to **Always** to start its stream. Wait for the
 monitor-template Job to complete before enabling ZoneMinder authentication;
 the initial setup uses the API while authentication is disabled.
 
+## System requirements and planning capacity
+
+The table gives **planning estimates**, not benchmark results or guaranteed
+limits. It assumes a dedicated worker node for this ZoneMinder deployment,
+H.264 camera streams without transcoding, and motion analysis configured at
+about 2–5 frames per second per camera. The monitor templates start with
+capture, analysis, and recording disabled; the estimates describe an activated
+system after you configure its monitors.
+
+| Tier | Worker node resources for ZoneMinder and MariaDB | Starting workload | Expected use |
+|---|---|---|---|
+| Low | 4 CPU cores, 8 GiB RAM | 1–2 cameras at 720p or 1080p, 5–10 capture FPS | Basic live viewing and event recording; use 2–3 analysis FPS per camera. |
+| Mid | 8 CPU cores, 16 GiB RAM | 3–6 cameras at 1080p, around 10 capture FPS | Typical small installation; use 2–5 analysis FPS per camera. |
+| High | 16 CPU cores, 32 GiB RAM | 6–12 cameras at 1080p, around 10–15 capture FPS | Larger installation with event recording; monitor CPU, memory, and disk load as cameras are added. |
+
+These estimates can drop with higher resolutions or frame rates, full-colour
+analysis, continuous recording, transcoding, multiple live viewers, or other
+workloads sharing the node. ZoneMinder's documentation notes that motion
+analysis is CPU intensive and that lowering its analysis FPS can allow more
+cameras; for many scenes, analysis does not need to run at the camera's full
+capture rate. See the [analysis settings guide](https://zoneminder.readthedocs.io/en/stable/userguide/definemonitor/definemonitor_analysis.html)
+and [memory planning FAQ](https://zoneminder.readthedocs.io/en/latest/faq.html).
+
+The example manifests request 500 millicores and 1 GiB for ZoneMinder, plus
+250 millicores and 512 MiB for MariaDB; ZoneMinder has a 4 GiB memory limit.
+Adjust those pod resources and the 1 GiB shared-memory volume to suit the node
+and workload. The event PVC starts at 50 GiB and the MariaDB PVC at 10 GiB;
+increase them to meet the desired recording retention. Check actual CPU, RAM,
+frame capture, and disk usage after enabling each monitor, and scale before
+adding more cameras if the system begins dropping frames or falling behind.
+
 ## Quick RTSP examples
 
 Replace `CAMERA_HOST`, `CAMERA_USER`, and `URL_ENCODED_PASSWORD` with values for
