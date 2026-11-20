@@ -17,4 +17,9 @@
 *.yaml.local
 *.yml.local
 *.secret.yaml
+*.conf
+peer_*/
+wg_confs/
+privatekey-*
+presharedkey-*
 

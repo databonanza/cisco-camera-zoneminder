@@ -36,10 +36,10 @@ Cisco-specific web endpoints rather than ONVIF PTZ.
 
 ## ZoneMinder zoom and focus controller
 
-The experimental [`Cisco2621Lens.pm`](../controller/Cisco2621Lens.pm) module
+The experimental [`Cisco2621Lens.pm`](../../controller/Cisco2621Lens.pm) module
 implements relative zoom, relative focus, and autofocus. It uses the camera's
 HTTPS interface and pins the camera's SHA-256 certificate fingerprint. See
-[ZoneMinder setup](zoneminder.md) for installation and settings.
+[ZoneMinder setup](../zoneminder/README.md) for installation and settings.
 
 The controller was exercised on a CIVS-IPC-2621V running firmware V4.4.2-2.
 Other firmware releases may have different endpoints or TLS behavior. The

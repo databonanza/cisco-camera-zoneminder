@@ -4,9 +4,10 @@
 
 1. Create a monitor and select **FFmpeg** as the source type.
 2. Select **TCP** for transport when the camera supports RTSP-over-TCP.
-3. Paste the model-specific RTSP path from its guide. Replace example host and
-   credential values in the ZoneMinder UI only. Percent-encode reserved URL
-   characters in embedded credentials.
+3. Paste the model-specific RTSP path from a
+   [Cisco camera guide](../cisco-cameras/). Replace example host and credential
+   values in the ZoneMinder UI only. Percent-encode reserved URL characters in
+   embedded credentials.
 4. Set capture resolution to the camera's configured stream resolution.
 5. Probe the monitor and confirm video, audio, frame rate, and timestamps before
    relying on recording.
@@ -17,8 +18,8 @@ fingerprints, or monitor database exports.
 
 ## Install the 2621V lens controller
 
-Copy `controller/Cisco2621Lens.pm` into ZoneMinder's Perl control-module
-directory. Package paths vary; common package paths include
+From the repository root, copy `controller/Cisco2621Lens.pm` into ZoneMinder's
+Perl control-module directory. Package paths vary; common package paths include
 `/usr/share/perl5/ZoneMinder/Control/` and `/usr/lib/zoneminder/cgi-bin/Control/`.
 Restart the ZoneMinder services or container after installation.
 
@@ -47,3 +48,6 @@ fingerprint from another camera.
 - Use HTTPS certificate fingerprint pinning for the 2621V lens controller.
   Its legacy TLS compatibility settings are not suitable for an untrusted
   network.
+
+See the [dedicated lens controller guide](lens-controller.md) for the module's
+requirements and configuration details.

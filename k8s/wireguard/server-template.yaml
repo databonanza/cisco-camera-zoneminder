@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wireguard-server-template
+data:
+  server.conf: |
+    [Interface]
+    Address = ${INTERFACE}.1
+    ListenPort = 51820
+    PrivateKey = $(cat /config/server/privatekey-server)
+    PostUp = iptables -I FORWARD 1 -i %i -d ${CAMERA_NETWORK} -j ACCEPT; iptables -I FORWARD 2 -i %i -j REJECT; iptables -I FORWARD 3 -o %i -s ${CAMERA_NETWORK} -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT; iptables -t nat -A POSTROUTING -s ${INTERFACE}.0/24 -d ${CAMERA_NETWORK} -o eth+ -j MASQUERADE
+    PostDown = iptables -D FORWARD -i %i -d ${CAMERA_NETWORK} -j ACCEPT; iptables -D FORWARD -i %i -j REJECT; iptables -D FORWARD -o %i -s ${CAMERA_NETWORK} -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT; iptables -t nat -D POSTROUTING -s ${INTERFACE}.0/24 -d ${CAMERA_NETWORK} -o eth+ -j MASQUERADE

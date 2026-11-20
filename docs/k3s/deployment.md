@@ -24,6 +24,38 @@ replicated CSI storage class if workloads must move between nodes. See the
   the manifest requests and limits as camera count, resolution, or frame rate
   grows.
 
+Run the command examples below from the repository root.
+
+## System requirements and planning capacity
+
+These are planning estimates, not benchmark results or guaranteed limits. They
+assume a dedicated worker node for ZoneMinder and MariaDB, H.264 camera streams
+without transcoding, and motion analysis configured at about 2–5 frames per
+second per camera. The monitor templates start with capture, analysis, and
+recording disabled; the estimates describe an activated system after monitor
+configuration.
+
+| Tier | Worker node resources for ZoneMinder and MariaDB | Starting workload | Expected use |
+|---|---|---|---|
+| Low | 4 CPU cores, 8 GiB RAM | 1–2 cameras at 720p or 1080p, 5–10 capture FPS | Basic live viewing and event recording; use 2–3 analysis FPS per camera. |
+| Mid | 8 CPU cores, 16 GiB RAM | 3–6 cameras at 1080p, around 10 capture FPS | Typical small installation; use 2–5 analysis FPS per camera. |
+| High | 16 CPU cores, 32 GiB RAM | 6–12 cameras at 1080p, around 10–15 capture FPS | Larger installation with event recording; monitor CPU, memory, and disk load as cameras are added. |
+
+Capacity can be lower with higher resolutions or frame rates, full-colour
+analysis, continuous recording, transcoding, multiple live viewers, or other
+workloads sharing the node. ZoneMinder's documentation notes that motion
+analysis is CPU intensive and that lowering its analysis FPS can allow more
+cameras; many scenes do not need analysis at the camera's full capture rate.
+See the [analysis settings guide](https://zoneminder.readthedocs.io/en/stable/userguide/definemonitor/definemonitor_analysis.html)
+and [memory planning FAQ](https://zoneminder.readthedocs.io/en/latest/faq.html).
+
+The base manifests request 500 millicores and 1 GiB for ZoneMinder, plus 250
+millicores and 512 MiB for MariaDB; ZoneMinder has a 4 GiB memory limit and a
+1 GiB shared-memory volume. The event PVC starts at 50 GiB and MariaDB at 10
+GiB. Increase resources and storage for your workload and retention target.
+The optional WireGuard pod requests 100 millicores and 128 MiB, with limits of
+500 millicores and 512 MiB.
+
 ## Create database credentials
 
 Create the namespace and enter unique passwords without putting them in a
@@ -119,6 +151,11 @@ service ports allowed across the camera network boundary.
 
 The deployment does not expose RTSP or ONVIF services from the cluster. Only
 the web UI is reachable through the Service or optional Ingress.
+
+For remote access to cameras on the private camera network, use the optional
+[WireGuard deployment and setup guide](../wireguard/README.md). Its manifests
+are separate because each installation needs its own public endpoint and
+camera-network routes.
 
 ## Storage, backups, and upgrades
 

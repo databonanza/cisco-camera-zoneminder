@@ -1,0 +1,128 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wireguard
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: wireguard
+  ports:
+    - name: wireguard
+      port: 51820
+      targetPort: wireguard
+      protocol: UDP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wireguard-udp
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: wireguard
+  ports:
+    - name: wireguard
+      port: 51820
+      targetPort: wireguard
+      nodePort: 31820
+      protocol: UDP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: wireguard
+spec:
+  serviceName: wireguard
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wireguard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wireguard
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: wireguard
+          image: lscr.io/linuxserver/wireguard:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - sysctl -w net.ipv4.ip_forward=1 && mkdir -p /config/templates && cp /wireguard-template/server.conf /config/templates/server.conf && exec /init
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: Etc/UTC
+            - name: SERVERURL
+              value: vpn.example.net
+            - name: SERVERPORT
+              value: "51820"
+            - name: PEERS
+              value: phone,laptop
+            - name: PEERDNS
+              value: auto
+            - name: INTERNAL_SUBNET
+              value: 10.13.13.0
+            - name: ALLOWEDIPS
+              value: 10.13.13.1/32,192.0.2.0/24
+            - name: CAMERA_NETWORK
+              value: 192.0.2.0/24
+            - name: PERSISTENTKEEPALIVE_PEERS
+              value: all
+            - name: LOG_CONFS
+              value: "false"
+          ports:
+            - name: wireguard
+              containerPort: 51820
+              protocol: UDP
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          startupProbe:
+            exec:
+              command: ["wg", "show", "wg0"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: ["wg", "show", "wg0"]
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["wg", "show", "wg0"]
+            periodSeconds: 30
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: server-template
+              mountPath: /wireguard-template
+              readOnly: true
+      volumes:
+        - name: server-template
+          configMap:
+            name: wireguard-server-template
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 2Gi
