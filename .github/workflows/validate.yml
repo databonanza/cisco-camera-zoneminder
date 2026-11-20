@@ -24,7 +24,7 @@ jobs:
       - name: Install kubeconform
         run: go install github.com/yannh/kubeconform/cmd/kubeconform@v0.8.0
       - name: Validate manifests, documentation, and scripts
-        run: PATH="$(go env GOPATH)/bin:$PATH" scripts/validate-manifests.sh
+        run: PATH="$(go env GOPATH)/bin:$PATH" bash scripts/validate-manifests.sh
       - name: Scan repository for secrets
         uses: gitleaks/gitleaks-action@v2
         env:
