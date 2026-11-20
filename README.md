@@ -24,6 +24,31 @@ to the public Internet.
 The deployable Kubernetes resources are in [`k8s/`](k8s/). Follow the
 [deployment guide](docs/k3s.md) to create the database Secret and install them.
 
+## K3s quick setup
+
+You need a working K3s cluster, `kubectl` pointed at that cluster, persistent
+storage (the manifests use K3s's `local-path` class), and network access from
+ZoneMinder to your cameras. Follow the [full setup guide](docs/k3s.md) to create
+the database credentials, then deploy and wait for the application and monitor
+templates:
+
+```sh
+kubectl apply -k k8s/
+kubectl -n zoneminder rollout status statefulset/zoneminder-db --timeout=10m
+kubectl -n zoneminder rollout status deployment/zoneminder --timeout=15m
+kubectl -n zoneminder wait --for=condition=complete job/zoneminder-monitor-templates --timeout=15m
+kubectl -n zoneminder port-forward service/zoneminder 8080:80
+```
+
+Open `http://localhost:8080/zm/`. The install creates inactive FFmpeg monitor
+templates for the CIVS-IPC-2621V, CIVS-IPC-6000P, and CIVS-IPC-6400E. They start
+with no camera address or credentials and **Capturing** set to **None**, so no
+stream is attempted on first install. In ZoneMinder, edit each monitor's Source
+Path to replace `CAMERA_HOST`, enter the camera's username and password, then
+set **General → Capturing** to **Always** to start its stream. Wait for the
+monitor-template Job to complete before enabling ZoneMinder authentication;
+the initial setup uses the API while authentication is disabled.
+
 ## Quick RTSP examples
 
 Replace `CAMERA_HOST`, `CAMERA_USER`, and `URL_ENCODED_PASSWORD` with values for
