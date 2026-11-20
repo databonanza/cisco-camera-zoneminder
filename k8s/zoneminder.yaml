@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: zoneminder-events
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zoneminder
+spec:
+  selector:
+    app.kubernetes.io/name: zoneminder
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zoneminder
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: zoneminder
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: zoneminder
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 90
+      containers:
+        - name: zoneminder
+          image: ghcr.io/zoneminder/zoneminder:1.38.6
+          env:
+            - name: TZ
+              value: Etc/UTC
+            - name: ZM_DB_HOST
+              value: zoneminder-db
+            - name: ZM_DB_NAME
+              value: zm
+            - name: ZM_DB_USER
+              value: zmuser
+            - name: ZM_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: zoneminder-db
+                  key: MARIADB_PASSWORD
+            - name: ZM_DB_WAIT_TIMEOUT
+              value: "300"
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /zm/
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 90
+          readinessProbe:
+            httpGet:
+              path: /zm/
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              memory: 4Gi
+          volumeMounts:
+            - name: events
+              mountPath: /var/cache/zoneminder
+            - name: shared-memory
+              mountPath: /dev/shm
+      volumes:
+        - name: events
+          persistentVolumeClaim:
+            claimName: zoneminder-events
+        - name: shared-memory
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi

@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zoneminder-monitor-templates
+data:
+  provision.py: |
+    import json
+    import time
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    api = "http://zoneminder/zm/api/monitors.json"
+    templates = [
+        {
+            "Name": "Cisco CIVS-IPC-2621V",
+            "Path": "rtsp://CAMERA_HOST:554/img/h264media.sav",
+            "Width": "720",
+            "Height": "480",
+        },
+        {
+            "Name": "Cisco CIVS-IPC-6000P",
+            "Path": "rtsp://CAMERA_HOST:554/StreamingSetting?version=1.0&action=getRTSPStream&ChannelID=1&ChannelName=Channel1",
+            "Width": "1920",
+            "Height": "1080",
+        },
+        {
+            "Name": "Cisco CIVS-IPC-6400E",
+            "Path": "rtsp://CAMERA_HOST:554/StreamingSetting?version=1.0&action=getRTSPStream&ChannelID=1&ChannelName=Channel1",
+            "Width": "1920",
+            "Height": "1080",
+        },
+    ]
+
+    def request(url, data=None):
+        body = None if data is None else urllib.parse.urlencode(data).encode()
+        req = urllib.request.Request(url, data=body)
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return json.load(response)
+
+    monitors = None
+    for attempt in range(30):
+        try:
+            monitors = request(api).get("monitors", [])
+            break
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+            if attempt == 29:
+                raise
+            time.sleep(10)
+
+    existing = {
+        item.get("Monitor", {}).get("Name")
+        for item in monitors
+    }
+
+    for template in templates:
+        name = template["Name"]
+        if name in existing:
+            print(f"Keeping existing monitor: {name}")
+            continue
+
+        fields = {
+            "Name": name,
+            "Type": "Ffmpeg",
+            "Function": "Monitor",
+            "Capturing": "None",
+            "Analysing": "None",
+            "Recording": "None",
+            "Enabled": "1",
+            "Method": "rtpRtsp",
+            "Path": template["Path"],
+            "User": "",
+            "Pass": "",
+            "Width": template["Width"],
+            "Height": template["Height"],
+            "Colours": "4",
+        }
+        payload = {f"Monitor[{key}]": value for key, value in fields.items()}
+        result = request(api, payload)
+        if result.get("message") != "Saved":
+            raise RuntimeError(f"Could not create {name}: {result}")
+        print(f"Created monitor template: {name}")
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: zoneminder-monitor-templates
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: 720
+  template:
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      containers:
+        - name: provision
+          image: python:3.13-alpine
+          command: ["python", "/config/provision.py"]
+          volumeMounts:
+            - name: provision-script
+              mountPath: /config
+              readOnly: true
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: provision-script
+          configMap:
+            name: zoneminder-monitor-templates

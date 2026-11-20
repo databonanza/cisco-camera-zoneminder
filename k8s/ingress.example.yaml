@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zoneminder
+  namespace: zoneminder
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - zm.example.com
+      secretName: zoneminder-tls
+  rules:
+    - host: zm.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: zoneminder
+                port:
+                  number: 80
