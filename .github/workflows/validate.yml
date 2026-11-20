@@ -12,20 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.x'
+          cache: false
       - name: Install kubeconform
         run: go install github.com/yannh/kubeconform/cmd/kubeconform@v0.8.0
       - name: Validate manifests, documentation, and scripts
         run: PATH="$(go env GOPATH)/bin:$PATH" bash scripts/validate-manifests.sh
       - name: Scan repository for secrets
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
