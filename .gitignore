@@ -20,6 +20,7 @@
 *.conf
 peer_*/
 wg_confs/
+/k8s/wireguard/overlays/local/
 privatekey-*
 presharedkey-*
 

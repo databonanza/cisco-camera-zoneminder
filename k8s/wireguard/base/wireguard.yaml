@@ -47,7 +47,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: wireguard
-          image: lscr.io/linuxserver/wireguard:latest
+          image: lscr.io/linuxserver/wireguard:1.0.20260223-r0-ls129
           command: ["/bin/sh", "-c"]
           args:
             - sysctl -w net.ipv4.ip_forward=1 && mkdir -p /config/templates && cp /wireguard-template/server.conf /config/templates/server.conf && exec /init
@@ -58,20 +58,8 @@ spec:
               value: "1000"
             - name: TZ
               value: Etc/UTC
-            - name: SERVERURL
-              value: vpn.example.net
-            - name: SERVERPORT
-              value: "51820"
-            - name: PEERS
-              value: phone,laptop
             - name: PEERDNS
               value: auto
-            - name: INTERNAL_SUBNET
-              value: 10.13.13.0
-            - name: ALLOWEDIPS
-              value: 10.13.13.1/32,192.0.2.0/24
-            - name: CAMERA_NETWORK
-              value: 192.0.2.0/24
             - name: PERSISTENTKEEPALIVE_PEERS
               value: all
             - name: LOG_CONFS

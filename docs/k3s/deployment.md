@@ -157,18 +157,48 @@ For remote access to cameras on the private camera network, use the optional
 are separate because each installation needs its own public endpoint and
 camera-network routes.
 
-## Storage, backups, and upgrades
+## Storage, backups, restore, and upgrades
 
-- ZoneMinder stores recordings and image cache under `/var/cache/zoneminder`.
-  Size the PVC for the desired retention period and configure event filters in
-  ZoneMinder to manage retention.
-- MariaDB data uses a separate persistent volume claim created by the
-  StatefulSet.
-- Back up both the MariaDB database and the ZoneMinder event PVC before
-  upgrading. A PVC alone is not a backup.
-- Before an upgrade, change the image tag in `k8s/zoneminder.yaml` to the
-  selected release, then apply the manifests and monitor the rollout.
-- Pin image digests in production if you require immutable deployments. The
-  example uses the upstream `1.38.6` tag; the official project publishes images
-  for amd64 and arm64 through Docker Hub and GHCR. See the
-  [ZoneMinder Docker guide](https://zoneminder.readthedocs.io/en/latest/installationguide/docker.html).
+ZoneMinder stores recordings and image cache under `/var/cache/zoneminder`.
+Size the PVC for the desired retention period and configure event filters to
+manage retention. MariaDB data uses a separate persistent volume claim. A PVC
+alone is not a backup: local-path volumes are tied to their node and can be
+lost with it.
+
+Create a consistent database and event-file backup from the repository root:
+
+```sh
+bash scripts/zm-backup.sh /path/to/new-private-backup
+```
+
+The script waits for MariaDB, scales ZoneMinder down to stop event writes,
+dumps the database, archives the event PVC, writes metadata and SHA-256
+checksums, then restores the previous ZoneMinder replica count. It creates a
+private backup directory with restrictive permissions. Store the resulting
+directory on storage outside the K3s node and keep a separate secure copy of
+the `zoneminder-db` Secret values in a password manager. The script needs
+`kubectl`, permission to scale the deployment and create a helper pod, and a
+local `sha256sum` or `shasum` utility.
+
+Restore is destructive and replaces both the database and event files. First
+verify the backup is appropriate for the deployed ZoneMinder and MariaDB
+versions, and make a fresh backup of current data. Then run:
+
+```sh
+bash scripts/zm-restore.sh /path/to/private-backup
+```
+
+The script verifies checksums before prompting for the exact word `RESTORE`.
+It stops ZoneMinder while importing. If any restore step fails, it leaves the
+ZoneMinder deployment scaled to zero so it cannot write against a partially
+restored database or event directory. Inspect the error, repair the restore,
+and scale the deployment back up only after confirming consistency. The helper
+pod manifest is stored at `k8s/backup/event-volume-helper.yaml` and is created
+only by these scripts.
+
+Before an upgrade, change the image tag in `k8s/zoneminder.yaml` to the
+selected release, then apply the manifests and monitor the rollout. Pin image
+digests in production if you require immutable deployments. The example uses
+the upstream `1.38.6` tag; the official project publishes images for amd64 and
+arm64 through Docker Hub and GHCR. See the
+[ZoneMinder Docker guide](https://zoneminder.readthedocs.io/en/latest/installationguide/docker.html).
